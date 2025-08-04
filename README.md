@@ -4,7 +4,7 @@ Objective: Analyze Globa Macro Database data.
 
 **What:** https://www.globalmacrodata.com/data.html
 
-**How:** Evidence.dev - You will use the Global Macro Database to create a dashboard that visualizes insights from the data. The dashboard should be built using Evidence.dev, which allows you to create interactive and visually appealing dashboards.
+**How:** You will use the Global Macro Database to create a dashboard that visualizes insights from the data. The dashboard should be built using a free dashboarding framework called Evidence.dev, which allows you to create interactive and visually appealing dashboards using simple Markdown-like syntax with sql embedded.
 
 **When:** You have one week to complete this task. Please ensure that you allocate enough time for data exploration, analysis, and dashboard creation.
 
