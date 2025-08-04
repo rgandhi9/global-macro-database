@@ -3,7 +3,9 @@ title: Global Macro Database - GDP Analysis
 description: Analysis of global GDP trends from the Global Macro Database
 ---
 
+
 # Global GDP Trends Since 1900
+<LastRefreshed prefix="Data last updated"/>
 
 This dashboard analyzes global GDP data from the Global Macro Database, showing aggregate GDP trends across all countries since 1900.
 
