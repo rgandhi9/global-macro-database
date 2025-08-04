@@ -1,0 +1,5 @@
+# This file was automatically generated
+name: gmd
+type: duckdb
+options:
+  filename: gmd.duckdb
