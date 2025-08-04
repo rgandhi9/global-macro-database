@@ -20,7 +20,7 @@ Objective: Analyze Globa Macro Database data.
 Create an Evidence dashboard with one or more pages that highlights some interesting insights from the Global Macro Database. You can focus on any aspect of the data that you find intriguing, such as GDP trends, inflation rates, or other macroeconomic indicators. It is up to you what topic you choose to analyze. You can use the data as is, or you can enrich it with other data sources. You should use the data to create a dashboard that visualizes the insights you found.
 
 Report has to be done in Evidence.dev, comitted to a public github repo and the generated static html page published to github pages. There is a Github action set up already that should publish your report on each commit. 
-You can find the documentation about here: https://docs.evidence.dev/components/all-components/
+You can find the documentation about how to use Evidence here: https://docs.evidence.dev/components/all-components/
 Information on deploying to GitHub pages is here: https://docs.evidence.dev/deployment/self-host/github-pages/
 
 Once it is done, please sned us the link to the GitHub repo and the link to the published dashboard.
@@ -32,7 +32,8 @@ We will have a look at it and get back to you with feedback. If we like it, we w
 - You need a github account to work on this task. Since the repository is going to be public, you might want to use a throwaway account.
 - Fork this repository to your account: https://github.com/sztanko/global-macro-database
 - use github codespaces to work on the report. It has all the tools you need preinstalled. In this way, you don't need to install anything on your local machine. All you need is a browser and a github account.
-- run `npm run dev` to start the local development server and preview your dashboard.
+- run `npm run dev` to start the local development server and preview your dashboard. A preview of your dashboard will open in a separate tab.
+- start editing `pages/index.md` and other md files you create under `pages` folder.  Any changes you make will be shown in the preview you have opened in the previous step. Documentation can be found here: https://docs.evidence.dev/
 - Don't forget to commit and push your changes to the repo.
 - you can browse the table structure and data in the DuckDB CLI, which is installed in the devcontainer. Just run `duckdb sources/gmd/gmd.duckdb --ui` in your command line.
 - For your convenience, we have included evidence_prompt.md file. You can use it to supply some context to the AI tools you use. It is not required, but it might help you to get better results.
@@ -60,5 +61,3 @@ See [the CLI docs](https://docs.evidence.dev/cli/) for more command information.
 
 - [Docs](https://docs.evidence.dev/)
 - [Github](https://github.com/evidence-dev/evidence)
-- [Slack Community](https://slack.evidence.dev/)
-- [Evidence Home Page](https://www.evidence.dev)
