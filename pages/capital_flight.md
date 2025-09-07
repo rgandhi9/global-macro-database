@@ -56,7 +56,7 @@ SELECT
     gdp_usd_billions,
     population_millions
 FROM ${active_markets}
-WHERE year >= 2016  -- Need baseline year for appreciation calculation
+-- WHERE year >= 2010  -- Baseline year for appreciation calculation
 ORDER BY country, year
 ```
 
@@ -68,22 +68,29 @@ SELECT
     ROUND(MAX(usd_appreciation_pct), 2) as max_usd_appreciation,
     ROUND(AVG(usd_appreciation_pct), 2) as avg_usd_appreciation,
     COUNT(*) as years_data,
-    -- Calculate correlation score (simplified)
+    -- Calculate correlation score
     CASE 
-        WHEN AVG(inflation_rate) > 15 AND AVG(usd_appreciation_pct) > 20 THEN 'Strong Positive'
-        WHEN AVG(inflation_rate) > 8 AND AVG(usd_appreciation_pct) > 10 THEN 'Moderate Positive'
-        WHEN AVG(inflation_rate) > 5 AND AVG(usd_appreciation_pct) > 5 THEN 'Weak Positive'
+        WHEN AVG(inflation_rate) > 0.15 AND AVG(usd_appreciation_pct) > 0.2 THEN 'Strong Positive'
+        WHEN AVG(inflation_rate) > 0.08 AND AVG(usd_appreciation_pct) > 0.1 THEN 'Moderate Positive'
+        WHEN AVG(inflation_rate) > 0.05 AND AVG(usd_appreciation_pct) > 0.05 THEN 'Weak Positive'
         ELSE 'Weak/Negative'
     END as correlation_strength
 FROM ${current_markets_analysis}
 GROUP BY country
 ORDER BY avg_inflation_rate DESC
 ```
+<DataTable data={inflation_correlation}>
+    <Column id=country/>
+    <Column id=avg_inflation_rate fmt="pct1" title="Avg Inflation"/>
+    <Column id=max_usd_appreciation fmt="pct1" title="Max USD Appreciation"/>
+    <Column id=avg_usd_appreciation fmt="pct1" title="Avg USD Appreciation"/>
+    <Column id=correlation_strength title="Pattern Strength"/>
+</DataTable>
 
 <ScatterPlot 
- data={current_markets_analysis}
- x=avg_inflation_to_date
- y=usd_appreciation_pct
+ data={inflation_correlation}
+ x=avg_inflation_rate
+ y=avg_usd_appreciation
  series=country
  title="Inflation Rate vs USD Appreciation by Country"
  xFmt="pct1"
@@ -128,7 +135,7 @@ SELECT
     gdp_usd_billions,
     population_millions
 FROM ${potential_markets}
-WHERE year >= 2016
+-- WHERE year >= 2010
 ORDER BY country, year
 ```
 
@@ -142,10 +149,10 @@ SELECT
     ROUND(AVG(population_millions), 1) as population_millions,
     -- Create opportunity score
     CASE 
-        WHEN AVG(inflation_rate) > 15 AND AVG(usd_appreciation_pct) > 20 THEN 100
-        WHEN AVG(inflation_rate) > 10 AND AVG(usd_appreciation_pct) > 15 THEN 80
-        WHEN AVG(inflation_rate) > 8 AND AVG(usd_appreciation_pct) > 10 THEN 60
-        WHEN AVG(inflation_rate) > 5 AND AVG(usd_appreciation_pct) > 5 THEN 40
+        WHEN AVG(inflation_rate) > 0.20 AND AVG(usd_appreciation_pct) > 0.2 THEN 100
+        WHEN AVG(inflation_rate) > 0.15 AND AVG(usd_appreciation_pct) > 0.15 THEN 80
+        WHEN AVG(inflation_rate) > 0.1 AND AVG(usd_appreciation_pct) > 0.1 THEN 60
+        WHEN AVG(inflation_rate) > 0.05 AND AVG(usd_appreciation_pct) > 0.05 THEN 40
         ELSE 20
     END as opportunity_score,
     -- Market attractiveness factors
@@ -192,10 +199,10 @@ SELECT
     ROUND(AVG(max_usd_appreciation), 2) as avg_max_appreciation,
     'Expansion targets' as status
 FROM ${expansion_ranking}
-WHERE opportunity_score >= 60
+WHERE opportunity_score >= 80
 ```
 
-{#each expansion_ranking.filter(d => d.opportunity_score >= 60).slice(0, 5) as opportunity}
+{#each expansion_ranking.filter(d => d.opportunity_score > 80).slice(0, 1) as opportunity}
 {opportunity.country}
 
 Opportunity Score: {opportunity.opportunity_score}/100
@@ -204,3 +211,9 @@ Market Size: {opportunity.market_size} market with {opportunity.population_milli
 Recommendation: {opportunity.opportunity_score >= 80 ? 'High Priority - Strong inflation/devaluation pattern similar to Argentina' : 'Medium Priority - Monitor for entry timing'}
 
 {/each}
+
+## Assumptions and Future Work
+- Ignoring regulatory differences and difficulties in new markets
+- While the above analysis helps acquire more users for growth, looking at countries with larger remittances out/inflows will likely convert this growth into profitability given the $3 transfer fees.
+- Isolate a current market which has proven to generate the highest revenues/profits and use that as a target to finding new markets - possibly through feature engineering to identify key categories and using these in a ML model.
+- Covid-19 will have impacted countries differently.  The effects of which have not been considered in this analysis given a starting period of 2015 has been used.
