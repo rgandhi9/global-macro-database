@@ -1,10 +1,11 @@
-# Capital Flight Opportunity
+# Capital Flight Opportunities
+**Data Coverage:** 2015 - 2025
 
 Capital flight is the rapid outflow of financial assets or money from a country, often due to economic or political instability, such as currency devaluation or regime change. This phenomenon can lead to a loss of wealth and a decline in the country's economic strength (Wikipedia).
 
 Given DolarApp allows users to convert local currencies to the USD stablecoin, countries which face the aforementioned risks may make ideal target markets for DolarApp to expand into and help users hold and build their wealth.
 
-DolarApp currently operates in Mexico, Argentina, Colombia and Brazil so these will be excluded from any final recommendations.
+DolarApp currently operates in Mexico, Argentina, Colombia and Brazil so these will be excluded from any final recommendations.  Additionally, we consider potential markets to be of a sufficiently large size e.g. GDP >$300B (i.e. larger than Colombia) and Population >45M (i.e. larger than Argentina).
 
 ```sql active_markets
 SELECT 
@@ -38,7 +39,7 @@ WHERE countryname NOT IN ('Mexico', 'Argentina', 'Colombia', 'Brazil')
     AND infl IS NOT NULL
     AND USDfx IS NOT NULL
     AND rGDP_USD / 1000 > 300  -- Focus on economies with meaningful size (i.e. at least larger than Colombia)
-    AND pop > 10  -- Ensure sufficient market size
+    AND pop > 45  -- Ensure sufficient market size
 ORDER BY countryname, year
 ```
 
@@ -61,6 +62,14 @@ FROM ${active_markets}
 -- WHERE year >= 2010  -- Baseline year for appreciation calculation
 ORDER BY country, year
 ```
+<DataTable data={current_markets_analysis} rows=11>
+    <Column id=country/>
+    <Column id=year/>
+    <Column id=inflation_rate fmt="pct1"/>
+    <Column id=usd_appreciation_pct fmt="pct1"/>
+    <Column id=avg_inflation_to_date fmt="pct1"/>
+    <Column id=real_effective_exchange_rate fmt="#,##0"/>
+</DataTable>
 
 ## Correlating Inflation with Currency Devaluation
 
@@ -98,25 +107,48 @@ ORDER BY avg_inflation_rate DESC
 />
 
 ## Time Series Analysis
-The 2 line charts below show inflation and currency devaluation (USD appreciation) over time for current markets.  For Argentina, we can see a slight lag in currency devaluation relative to inflation between 2022 and 2025.  Inflation could therefore be used as a predictor  of currency appreciation/devaluation in other markets, however there are many other macroeconomic factors which could be influencing these trends so further research would be required.
-<LineChart 
- data={current_markets_analysis}
- x=year
- y=inflation_rate
- series=country
- title="Inflation Rates Over Time - Current Markets"
- yFmt="pct1"
- yAxisTitle="Inflation Rate (%)"
-/>
+The 2 line charts below show inflation and currency devaluation (USD appreciation) over time for current markets.
+
+Given Argentina's high values, it's been separated out allow trends to be seen in the other 3 countries.  Generally speaking, the correlation shown above can also be seen in these charts.  Therefore, this correlation of high inflation and high currency devaluation would be one factor that would be considered in the final recommendation.
+
+Select markets to analyse:
+<Dropdown 
+    name=country_group
+    title="Market Selection"
+>
+    <DropdownOption value="Argentina" valueLabel="Argentina (High Inflation Market)"/>
+    <DropdownOption value="Others" valueLabel="Mexico, Colombia & Brazil (Stable Markets)"/>
+</Dropdown>
+
+```sql filtered_timeseries
+SELECT *
+FROM ${current_markets_analysis}
+WHERE 
+    CASE 
+        WHEN '${inputs.country_group.value}' = 'Argentina' THEN country = 'Argentina'
+        WHEN '${inputs.country_group.value}' = 'Others' THEN country IN ('Mexico', 'Colombia', 'Brazil')
+        ELSE country IN ('Mexico', 'Argentina', 'Colombia', 'Brazil')  -- Default fallback
+    END
+ORDER BY country, year
+```
 
 <LineChart 
- data={current_markets_analysis}
- x=year
- y=usd_appreciation_pct
- series=country
- title="USD Appreciation Over Time - Current Markets"
- yFmt="pct1"
- yAxisTitle="USD Appreciation (%)"
+data={filtered_timeseries}
+x=year
+y=inflation_rate
+series=country
+title="Inflation Rates Over Time - {inputs.country_group.value === 'Argentina' ? 'Argentina' : inputs.country_group.value === 'Others' ? 'Mexico, Colombia & Brazil' : 'Current Markets'}"
+yFmt="pct1"
+yAxisTitle="Inflation Rate (%)"
+/>
+<LineChart 
+data={filtered_timeseries}
+x=year
+y=usd_appreciation_pct
+series=country
+title="USD Appreciation Over Time - {inputs.country_group.value === 'Argentina' ? 'Argentina' : inputs.country_group.value === 'Others' ? 'Mexico, Colombia & Brazil' : 'Current Markets'}"
+yFmt="pct1"
+yAxisTitle="USD Appreciation (%)"
 />
 
 ## Expansion Opportunities
@@ -182,7 +214,8 @@ LIMIT 15
 </DataTable>
 
 ## Summary Insights
-A summary table is given below showing a high-level representation of current markets along with high-opportunity markets i.e. an Opportunity score of 80 or more.  The average inflation in <Value data={key_insights} /> is <Value data={key_insights} column=avg_inflation fmt=pct0 /> compared with <Value data={key_insights} row=1 /> markets where it's <Value data={key_insights} column=avg_inflation row=1 fmt=pct0 />.  While the inflations numbers are similar, the average max appreciation of the USD is lower (<Value data={key_insights} column=avg_max_appreciation fmt=pct0 /> in <Value data={key_insights} /> vs <Value data={key_insights} column=avg_max_appreciation row=1 fmt=pct0 /> in <Value data={key_insights} row=1/>) which would indicate greater currency stability (though still significant enough to provide business opportunities).
+A summary table is given below showing a high-level representation of current markets along with high-opportunity markets i.e. an Opportunity score of **80** or more.  The average inflation in **<Value data={key_insights} />** is **<Value data={key_insights} column=avg_inflation fmt=pct0 />** compared with **<Value data={key_insights} row=1 />** markets where it's **<Value data={key_insights} column=avg_inflation row=1 fmt=pct0 />**.  While the inflations numbers are similar, the average max appreciation of the USD is lower (**<Value data={key_insights} column=avg_max_appreciation fmt=pct0 />** in **<Value data={key_insights} />** vs **<Value data={key_insights} column=avg_max_appreciation row=1 fmt=pct0 />** in **<Value data={key_insights} row=1/>**) which would indicate greater currency stability (though still significant enough to provide business opportunities).
+
 ```sql key_insights
 SELECT 
     'Current Markets' as market_type,
@@ -201,20 +234,30 @@ SELECT
 FROM ${expansion_ranking}
 WHERE opportunity_score >= 80
 ```
+<DataTable data={key_insights}>
+    <Column id=market_type title="Market Category"/>
+    <Column id=countries title="Countries"/>
+    <Column id=avg_inflation fmt="pct1" title="Average Inflation"/>
+    <Column id=avg_max_appreciation fmt="pct1" title="Average Max USD Appreciation"/>
+    <Column id=status title="Status"/>
+</DataTable>
+
 The top 3 countries for expansion which exhibit high inflation, a devaluing currency and a large market size are given below (given current geopolitical issues, Iran would be excluded.  However, Turkey and Nigeria alone provide a market size of 300m people):
 
 {#each expansion_ranking.filter(d => d.opportunity_score >= 80).slice(0, 3) as opportunity}
 **{opportunity.country}**
 
-Opportunity Score: {opportunity.opportunity_score}/100
-Market Dynamics: {fmt(opportunity.avg_inflation_rate,'pct0')} average inflation driving {fmt(opportunity.max_usd_appreciation,'pct0')} peak USD appreciation
-Market Size: {opportunity.market_size} market with {opportunity.population_millions}M people and ${opportunity.avg_gdp_billions}B GDP
+Opportunity Score: **{opportunity.opportunity_score}/100**
+Market Dynamics: **{fmt(opportunity.avg_inflation_rate,'pct0')}** average inflation driving **{fmt(opportunity.max_usd_appreciation,'pct0')}** peak USD appreciation
+Market Size: **{opportunity.market_size}** market with **{opportunity.population_millions}M** people and **${opportunity.avg_gdp_billions}B** GDP
 Recommendation: {opportunity.opportunity_score >= 80 ? 'High Priority - Strong inflation/devaluation pattern similar to Argentina' : 'Medium Priority - Monitor for entry timing'}
 
 {/each}
 
 ## Assumptions and Future Work
-- Ignoring regulatory differences and difficulties in new markets
-- While the above analysis helps acquire more users for growth, looking at countries with larger remittances out/inflows will likely convert this growth into profitability given the $3 transfer fees.
-- Isolate a current market which has proven to generate the highest revenues/profits and use that as a target to finding new markets - possibly through feature engineering to identify key categories and using these in a ML model.
-- Covid-19 will have impacted countries differently.  The effects of which have not been considered in this analysis given a starting period of 2015 has been used.
+- **Regulation:** We ignore regulatory differences and difficulties in new markets.
+- **Statistical Significance:** Categorical values for Inflation, GDP and Currency are fairly arbitrarily chosen.  A more robust approach can be developed.
+- **Remittances:** While the above analysis helps acquire more users for growth, looking at countries with larger remittances out/inflows will likely convert this growth into profitability given the $3 transfer fees.  The World Bank [reported](https://moneytransfers.com/remittance-statistics) that in 2023, Mexico was responsible for receiving $67B of remittances (around 8% globally (while India was the largest at $125B)) and therefore enriching current GMD with remittance data may paint a different picture for target markets.
+- **Currency Volatility:** combining high currency spikes/fluctuations with user acquisition may help determine when best to deliver marketing campaigns.
+- **Feature Engineering:** Isolate a current market which has proven to generate the highest revenues/profits and use that as a target to finding new markets - possibly through feature engineering to identify key categories and using these in a ML model.
+- **Covid-19:** This will have impacted countries differently.  The effects of which have not been considered in this analysis given a starting period of 2015 has been used.
