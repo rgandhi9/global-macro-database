@@ -42,15 +42,17 @@ WHERE countryname NOT IN ('Mexico', 'Argentina', 'Colombia', 'Brazil')
 ORDER BY countryname, year
 ```
 
+The following table is used to for calculating cumulative inflation and depreciation of the local currency against the USD for longer term trends.  YoY fluctuations could be used in future work to better understand currency volatility.
+
 ```sql current_markets_analysis
 SELECT 
     country,
     year,
     inflation_rate,
     usd_fx_rate,
-    -- Calculate USD appreciation (higher = local currency weakening)
+    -- Cumulative USD appreciation (higher = local currency weakening)
     (usd_fx_rate / FIRST_VALUE(usd_fx_rate) OVER (PARTITION BY country ORDER BY year) - 1) as usd_appreciation_pct,
-    -- Calculate cumulative inflation
+    -- Cumulative inflation
     AVG(inflation_rate) OVER (PARTITION BY country ORDER BY year ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as avg_inflation_to_date,
     real_effective_exchange_rate,
     gdp_usd_billions,
@@ -60,6 +62,9 @@ FROM ${active_markets}
 ORDER BY country, year
 ```
 
+## Correlating Inflation with Currency Devaluation
+
+Below, we can observe a very obvious positive relationship between rising inflation and local currency devaluation for the Argentinian Peso.  While Argentina is an extreme example facing both hyper-inflation and hyper-devaluation, it represents a textbook case for USD service demand.  DolarApp's other markets are less extreme - Mexico being the most stable with almost normal levels of inflation at 5%.
 
 ```sql inflation_correlation
 SELECT 
@@ -79,13 +84,6 @@ FROM ${current_markets_analysis}
 GROUP BY country
 ORDER BY avg_inflation_rate DESC
 ```
-<DataTable data={inflation_correlation}>
-    <Column id=country/>
-    <Column id=avg_inflation_rate fmt="pct1" title="Avg Inflation"/>
-    <Column id=max_usd_appreciation fmt="pct1" title="Max USD Appreciation"/>
-    <Column id=avg_usd_appreciation fmt="pct1" title="Avg USD Appreciation"/>
-    <Column id=correlation_strength title="Pattern Strength"/>
-</DataTable>
 
 <ScatterPlot 
  data={inflation_correlation}
@@ -100,7 +98,7 @@ ORDER BY avg_inflation_rate DESC
 />
 
 ## Time Series Analysis
-
+The 2 line charts below show inflation and currency devaluation (USD appreciation) over time for current markets.  For Argentina, we can see a slight lag in currency devaluation relative to inflation between 2022 and 2025.  Inflation could therefore be used as a predictor  of currency appreciation/devaluation in other markets, however there are many other macroeconomic factors which could be influencing these trends so further research would be required.
 <LineChart 
  data={current_markets_analysis}
  x=year
@@ -122,14 +120,18 @@ ORDER BY avg_inflation_rate DESC
 />
 
 ## Expansion Opportunities
+Based on the information above, we would want to target countries which have high inflation and currency devaluation against the USD.  
+
 ```sql expansion_analysis
+-- Same query as current_markets_analysis above but for potential_markets
 SELECT 
     country,
     year,
     inflation_rate,
     usd_fx_rate,
-    -- Calculate USD appreciation for potential markets
+    -- Cumulative USD appreciation (higher = local currency weakening)
     (usd_fx_rate / FIRST_VALUE(usd_fx_rate) OVER (PARTITION BY country ORDER BY year) - 1) as usd_appreciation_pct,
+    -- Cumulative inflation
     AVG(inflation_rate) OVER (PARTITION BY country ORDER BY year ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as avg_inflation_to_date,
     real_effective_exchange_rate,
     gdp_usd_billions,
@@ -138,7 +140,7 @@ FROM ${potential_markets}
 -- WHERE year >= 2010
 ORDER BY country, year
 ```
-
+We can create a scoring system to assign a numeric value for each country to indicate an attractiveness to expand into.  This is called the **Opportunity Score**.
 ```sql expansion_ranking
 SELECT 
     country,
@@ -149,7 +151,7 @@ SELECT
     ROUND(AVG(population_millions), 1) as population_millions,
     -- Create opportunity score
     CASE 
-        WHEN AVG(inflation_rate) > 0.20 AND AVG(usd_appreciation_pct) > 0.2 THEN 100
+        WHEN AVG(inflation_rate) > 0.2 AND AVG(usd_appreciation_pct) > 0.2 THEN 100
         WHEN AVG(inflation_rate) > 0.15 AND AVG(usd_appreciation_pct) > 0.15 THEN 80
         WHEN AVG(inflation_rate) > 0.1 AND AVG(usd_appreciation_pct) > 0.1 THEN 60
         WHEN AVG(inflation_rate) > 0.05 AND AVG(usd_appreciation_pct) > 0.05 THEN 40
@@ -172,22 +174,21 @@ LIMIT 15
 <DataTable data={expansion_ranking} rows=15>
     <Column id=country/>
     <Column id=avg_inflation_rate fmt="pct1" title="Avg Inflation"/>
-    <Column id=max_usd_appreciation fmt="pct1" title="Max USD Appreciation"/>
+    <Column id=avg_usd_appreciation fmt="pct1" title="Avg USD Appreciation"/>
     <Column id=opportunity_score contentType=bar title="Opportunity Score"/>
     <Column id=avg_gdp_billions fmt="#,##0" title="GDP (Billions)"/>
     <Column id=population_millions fmt="#,##0.0" title="Population (M)"/>
     <Column id=market_size title="Market Size"/>
 </DataTable>
 
-## Insights
-
+## Summary Insights
+A summary table is given below showing a high-level representation of current markets along with high-opportunity markets i.e. an Opportunity score of 80 or more.  The average inflation in <Value data={key_insights} /> is <Value data={key_insights} column=avg_inflation fmt=pct0 /> compared with <Value data={key_insights} row=1 /> markets where it's <Value data={key_insights} column=avg_inflation row=1 fmt=pct0 />.  While the inflations numbers are similar, the average max appreciation of the USD is lower (<Value data={key_insights} column=avg_max_appreciation fmt=pct0 /> in <Value data={key_insights} /> vs <Value data={key_insights} column=avg_max_appreciation row=1 fmt=pct0 /> in <Value data={key_insights} row=1/>) which would indicate greater currency stability (though still significant enough to provide business opportunities).
 ```sql key_insights
 SELECT 
     'Current Markets' as market_type,
     COUNT(DISTINCT country) as countries,
     ROUND(AVG(avg_inflation_rate), 2) as avg_inflation,
-    ROUND(AVG(max_usd_appreciation), 2) as avg_max_appreciation,
-    'Established operations' as status
+    ROUND(AVG(max_usd_appreciation), 2) as avg_max_appreciation
 FROM ${inflation_correlation}
 
 UNION ALL
@@ -196,17 +197,17 @@ SELECT
     'High Opportunity' as market_type,
     COUNT(*) as countries,
     ROUND(AVG(avg_inflation_rate), 2) as avg_inflation,
-    ROUND(AVG(max_usd_appreciation), 2) as avg_max_appreciation,
-    'Expansion targets' as status
+    ROUND(AVG(max_usd_appreciation), 2) as avg_max_appreciation
 FROM ${expansion_ranking}
 WHERE opportunity_score >= 80
 ```
+The top 3 countries for expansion which exhibit high inflation, a devaluing currency and a large market size are given below (given current geopolitical issues, Iran would be excluded.  However, Turkey and Nigeria alone provide a market size of 300m people):
 
-{#each expansion_ranking.filter(d => d.opportunity_score > 80).slice(0, 1) as opportunity}
-{opportunity.country}
+{#each expansion_ranking.filter(d => d.opportunity_score >= 80).slice(0, 3) as opportunity}
+**{opportunity.country}**
 
 Opportunity Score: {opportunity.opportunity_score}/100
-Market Dynamics: {opportunity.avg_inflation_rate}% average inflation driving {opportunity.max_usd_appreciation}% peak USD appreciation
+Market Dynamics: {fmt(opportunity.avg_inflation_rate,'pct0')} average inflation driving {fmt(opportunity.max_usd_appreciation,'pct0')} peak USD appreciation
 Market Size: {opportunity.market_size} market with {opportunity.population_millions}M people and ${opportunity.avg_gdp_billions}B GDP
 Recommendation: {opportunity.opportunity_score >= 80 ? 'High Priority - Strong inflation/devaluation pattern similar to Argentina' : 'Medium Priority - Monitor for entry timing'}
 
